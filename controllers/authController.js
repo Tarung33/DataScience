@@ -101,10 +101,7 @@ const getCurrentUser = async (req, res) => {
             .populate('department', 'name code')
             .populate('section', 'name semester')
             .populate('courses', 'name code semester')
-            .select('+isSpecialFaculty'); // Ensure this field is selected if it was excluded (though it's not by default, good to be safe or just standard query)
-
-        // Actually, isSpecialFaculty is NOT set to 'select: false' in schema, so it returns by default.
-        // But let's verify if anything else is needed.
+            .select('+isSpecialFaculty');
 
         res.json({
             success: true,
@@ -116,4 +113,28 @@ const getCurrentUser = async (req, res) => {
     }
 };
 
-module.exports = { login, logout, getCurrentUser };
+// @desc    Update password
+// @route   PUT /api/auth/updatepassword
+// @access  Private
+const updatePassword = async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+
+        const user = await User.findById(req.user.id).select('+password');
+
+        // Check current password
+        if (!(await user.matchPassword(currentPassword))) {
+            return res.status(401).json({ message: 'Current password is incorrect' });
+        }
+
+        user.password = newPassword;
+        await user.save();
+
+        res.json({ success: true, message: 'Password updated successfully' });
+    } catch (error) {
+        console.error('Update password error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+module.exports = { login, logout, getCurrentUser, updatePassword };
