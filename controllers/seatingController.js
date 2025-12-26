@@ -194,50 +194,48 @@ const getStudentSeating = async (req, res) => {
             status: 'approved'
         }).sort('-date');
 
-        // Filter student's specific seat from assignments
-        const studentInfo = plans.map(p => {
-            let seatNumber = null;
+        const studentSeatingDetails = [];
 
+        plans.forEach(p => {
+            let foundInPlan = false;
             for (const room of p.roomAssignments) {
                 const found = room.studentAssignments.find(a =>
-                    a.student.toString() === req.user._id.toString()
+                    a.student && a.student.toString() === req.user._id.toString()
                 );
-                if (found) {
-                    myAssignment = found;
-                    myRoom = room.roomName;
 
+                if (found) {
+                    const myAssignment = found;
+                    const myRoom = room.roomName;
                     // Calculate Seat Number
-                    // Bench Index (Column-Major): ((col-1) * rows) + (row-1)
                     const r = found.row;
                     const c = found.col;
                     const rows = room.rows;
                     const capacity = room.benchCapacity || 2;
-
                     const benchIdx = ((c - 1) * rows) + (r - 1);
-                    seatNumber = (benchIdx * capacity) + found.seatPosition;
+                    const seatNumber = (benchIdx * capacity) + found.seatPosition;
 
+                    studentSeatingDetails.push({
+                        examName: p.examName,
+                        date: p.date,
+                        time: p.time,
+                        room: room.roomName,
+                        row: found.row,
+                        col: found.col,
+                        seatNumber: seatNumber
+                    });
+                    foundInPlan = true;
                     break;
                 }
             }
-
-            return {
-                examName: p.examName,
-                date: p.date,
-                time: p.time, // Include time
-                room: myRoom,
-                row: myAssignment?.row,
-                col: myAssignment?.col,
-                seatNumber: seatNumber
-            };
-        }).filter(item => item.room);
+        });
 
         res.json({
             success: true,
-            seating: studentInfo
+            seating: studentSeatingDetails
         });
     } catch (error) {
         console.error('Get student seating error:', error);
-        res.status(500).json({ message: 'Server error' });
+        res.status(500).json({ message: 'Server error', details: error.message });
     }
 };
 
@@ -258,8 +256,11 @@ const getNotifications = async (req, res) => {
             notifications
         });
     } catch (error) {
-        console.error('Get notifications error:', error);
-        res.status(500).json({ message: 'Server error' });
+        console.error('SERVER ERROR [getNotifications]:', error);
+        res.status(500).json({
+            message: 'Server error',
+            details: error.message
+        });
     }
 };
 
