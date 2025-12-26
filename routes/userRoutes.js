@@ -8,6 +8,8 @@ const {
     assignDepartment,
     toggleSpecialFaculty,
     updateFcmToken,
+    bulkPromote,
+    bulkAssignCourses,
 } = require('../controllers/userController');
 const { protect } = require('../middleware/auth');
 const { checkRole } = require('../middleware/roleCheck');
@@ -24,6 +26,10 @@ router.get('/', protect, checkRole('admin', 'hod', 'faculty'), getAllUsers);
 router.get('/:id', protect, getUserById);
 router.put('/:id', protect, updateUser);
 router.delete('/:id', protect, checkRole('admin'), deleteUser);
+
+// Bulk operations
+router.put('/bulk/promote', protect, checkRole('admin'), bulkPromote);
+router.put('/bulk/assign-courses', protect, checkRole('admin'), bulkAssignCourses);
 
 // Assign department/section/semester - Admin and HOD
 router.put('/:id/assign-department', protect, checkRole('admin', 'hod'), assignDepartment);

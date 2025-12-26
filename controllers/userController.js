@@ -327,6 +327,90 @@ const updateFcmToken = async (req, res) => {
     }
 };
 
+// @desc    Bulk promote students to next semester
+// @route   PUT /api/users/bulk-promote
+// @access  Private (Admin)
+const bulkPromote = async (req, res) => {
+    try {
+        const { department, currentSemester } = req.body;
+
+        if (!department || !currentSemester) {
+            return res.status(400).json({ message: 'Department and current semester are required' });
+        }
+
+        const result = await User.updateMany(
+            {
+                role: 'student',
+                department,
+                semester: currentSemester,
+                isActive: true
+            },
+            {
+                $inc: { semester: 1 }
+            }
+        );
+
+        res.json({
+            success: true,
+            message: `Successfully promoted ${result.modifiedCount} students`,
+            modifiedCount: result.modifiedCount
+        });
+    } catch (error) {
+        console.error('Bulk promote error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+// @desc    Bulk assign courses to students based on department and semester
+// @route   PUT /api/users/bulk-assign-courses
+// @access  Private (Admin)
+const bulkAssignCourses = async (req, res) => {
+    try {
+        const { department, semester } = req.body;
+
+        if (!department || !semester) {
+            return res.status(400).json({ message: 'Department and semester are required' });
+        }
+
+        // 1. Get all active courses for this dept and semester
+        const Course = require('../models/Course');
+        const courses = await Course.find({
+            department,
+            semester,
+            isActive: true
+        });
+
+        if (courses.length === 0) {
+            return res.status(404).json({ message: 'No courses found for this department and semester' });
+        }
+
+        const courseIds = courses.map(c => c._id);
+
+        // 2. Assign these courses to all matching students
+        const result = await User.updateMany(
+            {
+                role: 'student',
+                department,
+                semester,
+                isActive: true
+            },
+            {
+                $set: { courses: courseIds }
+            }
+        );
+
+        res.json({
+            success: true,
+            message: `Successfully assigned courses to ${result.modifiedCount} students`,
+            modifiedCount: result.modifiedCount,
+            coursesCount: courseIds.length
+        });
+    } catch (error) {
+        console.error('Bulk assign courses error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
 module.exports = {
     createUser,
     getAllUsers,
@@ -336,4 +420,6 @@ module.exports = {
     assignDepartment,
     toggleSpecialFaculty,
     updateFcmToken,
+    bulkPromote,
+    bulkAssignCourses,
 };

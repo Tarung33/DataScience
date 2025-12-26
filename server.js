@@ -68,6 +68,8 @@ app.use('/api/announcements', announcementRoutes);
 app.use('/api/groups', groupRoutes);
 app.use('/api/marks', marksRoutes);
 app.use('/api/seating', require('./routes/seatingRoutes'));
+app.use('/api/calendar', require('./routes/calendarRoutes'));
+app.use('/api/timetable', require('./routes/timetableRoutes'));
 
 // Static folder for uploads
 const path = require('path');
