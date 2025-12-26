@@ -3,6 +3,7 @@ const Message = require('../models/Message');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
 const mongoose = require('mongoose');
+const { sendPushNotification } = require('../utils/pushNotifications');
 
 // @desc    Get user's groups
 // @route   GET /api/groups
@@ -114,6 +115,7 @@ const sendMessage = async (req, res) => {
         const recipients = group.members.filter(memberId => memberId.toString() !== req.user._id.toString());
 
         if (recipients.length > 0) {
+            // Internal platform notification
             const notifications = recipients.map(recipient => ({
                 recipient,
                 title: `New Message in ${group.name}`,
@@ -123,6 +125,30 @@ const sendMessage = async (req, res) => {
                 isRead: false
             }));
             await Notification.insertMany(notifications);
+
+            // Real push notification
+            try {
+                const recipientUsers = await User.find({
+                    _id: { $in: recipients },
+                    fcmTokens: { $exists: true, $not: { $size: 0 } }
+                }).select('fcmTokens');
+
+                const allTokens = recipientUsers.reduce((tokens, u) => [...tokens, ...u.fcmTokens], []);
+
+                if (allTokens.length > 0) {
+                    await sendPushNotification(allTokens, {
+                        title: `New Message in ${group.name}`,
+                        body: `${req.user.name}: ${content.substring(0, 60)}...`,
+                        data: {
+                            groupId: groupId.toString(),
+                            type: 'group_message'
+                        }
+                    });
+                }
+            } catch (pError) {
+                console.error('Push notification failed to send:', pError);
+                // Don't fail the message sending if push fails
+            }
         }
 
         res.status(201).json({

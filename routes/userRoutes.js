@@ -7,6 +7,7 @@ const {
     deleteUser,
     assignDepartment,
     toggleSpecialFaculty,
+    updateFcmToken,
 } = require('../controllers/userController');
 const { protect } = require('../middleware/auth');
 const { checkRole } = require('../middleware/roleCheck');
@@ -29,5 +30,8 @@ router.put('/:id/assign-department', protect, checkRole('admin', 'hod'), assignD
 
 // Toggle Special Faculty permission - HOD only
 router.patch('/:id/toggle-special', protect, checkRole('hod'), toggleSpecialFaculty);
+
+// Register FCM token for push notifications
+router.post('/update-fcm-token', protect, updateFcmToken);
 
 module.exports = router;

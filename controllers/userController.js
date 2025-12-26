@@ -296,6 +296,37 @@ const toggleSpecialFaculty = async (req, res) => {
     }
 };
 
+// @desc    Update FCM token for push notifications
+// @route   POST /api/users/update-fcm-token
+// @access  Private
+const updateFcmToken = async (req, res) => {
+    try {
+        const { fcmToken } = req.body;
+        if (!fcmToken) {
+            return res.status(400).json({ message: 'FCM token is required' });
+        }
+
+        const user = await User.findById(req.user._id);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Check if token already exists to avoid duplicates
+        if (!user.fcmTokens.includes(fcmToken)) {
+            user.fcmTokens.push(fcmToken);
+            await user.save();
+        }
+
+        res.json({
+            success: true,
+            message: 'FCM token updated successfully',
+        });
+    } catch (error) {
+        console.error('Update FCM token error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
 module.exports = {
     createUser,
     getAllUsers,
@@ -304,4 +335,5 @@ module.exports = {
     deleteUser,
     assignDepartment,
     toggleSpecialFaculty,
+    updateFcmToken,
 };
